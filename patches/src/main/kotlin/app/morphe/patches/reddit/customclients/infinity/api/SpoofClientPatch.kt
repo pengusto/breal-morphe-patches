@@ -7,6 +7,7 @@
 
 package app.morphe.patches.reddit.customclients.infinity.api
 
+import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
@@ -36,6 +37,7 @@ private val disableBillingPatch = bytecodePatch(
         billingClientOnServiceConnectedFingerprint.methodOrNull?.returnEarly()
         (infinityStartSubscriptionActivityFingerprint.methodOrNull
             ?: infinityStartSubscriptionActivityNewFingerprint.method).returnEarly()
+        disableCustomClientBillingState()
     }
 }
 
@@ -51,6 +53,7 @@ val spoofClientPatch = spoofClientPatch { clientIdOption, redirectUriOption, use
             default = false
         ) {
             execute {
+                patchOAuthRedirectManifest(redirectUri!!)
                 /*
                 get("res/xml/api_keys_preferences.xml").utf8Writer().use { writer ->
                     writer.write("""
@@ -114,6 +117,7 @@ val spoofClientPatch = spoofClientPatch { clientIdOption, redirectUriOption, use
     execute {
         getDefaultClientIdFingerprint.method.returnEarly(clientId!!)
         getDefaultRedirectUriFingerprint.method.returnEarly(redirectUri!!)
+        patchAuthTabRedirectScheme(redirectUri!!)
         getDefaultUserAgentFingerprint.method.returnEarly(userAgent!!)
 
         clientIdFingerprint.matchAll().forEach { match ->
@@ -131,7 +135,11 @@ val spoofClientPatch = spoofClientPatch { clientIdOption, redirectUriOption, use
             match.replaceStringMatchesWithFunc(GET_USER_AGENT_METHOD)
         }
 
-        redirectUriFingerprint.matchAll().forEach { match ->
+        // R8 moves token exchange into root-package helpers in 8.3.4.
+        // Match the literal across app code; exclude the extension's own fallback getter.
+        Fingerprint(strings = listOf("infinity://localhost")).matchAll()
+            .filterNot { it.method.definingClass.startsWith("Lapp/morphe/extension/") }
+            .forEach { match ->
             match.replaceStringMatchesWithFunc(GET_REDIRECT_URI_METHOD)
         }
 

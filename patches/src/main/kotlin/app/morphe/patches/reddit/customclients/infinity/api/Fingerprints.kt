@@ -46,11 +46,6 @@ internal fun userAgentFingerprint(versionName: String) = Fingerprint(
     strings = listOf("android:ml.docilealligator.infinityforreddit:$versionName (by /u/Hostilenemy)")
 )
 
-internal val redirectUriFingerprint = Fingerprint(
-    definingClass = "Lml/docilealligator",
-    strings = listOf("infinity://localhost")
-)
-
 internal val settingsActivityOnBackStackChangedFingerprint = Fingerprint(
     definingClass = "Lml/docilealligator/infinityforreddit/activities/SettingsActivity;",
     filters = OpcodesFilter.opcodesToFilters(
